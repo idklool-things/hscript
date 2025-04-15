@@ -598,7 +598,7 @@ class Parser {
 				if( semic ) push(TSemicolon);
 			}
 			mk(EIf(cond,e1,e2),p1,(e2 == null) ? tokenMax : pmax(e2));
-		case "var":
+		case "var", "final":
 			var ident = getIdent();
 			var tk = token();
 			var t = null;
@@ -916,7 +916,13 @@ class Parser {
 				if( op == "<" ) {
 					params = [];
 					while( true ) {
-						params.push(parseType());
+						switch( token() ) {
+						case TConst(c):
+							params.push(CTExpr(mk(EConst(c))));
+						case tk:
+							push(tk);
+							params.push(parseType());
+						}
 						t = token();
 						switch( t ) {
 						case TComma: continue;
@@ -942,8 +948,8 @@ class Parser {
 			}
 			return parseTypeNext(CTPath(path, params));
 		case TPOpen:
-			var a = token(),
-					b = token();
+			var a = token();
+			var b = token();
 
 			push(b);
 			push(a);
@@ -996,9 +1002,13 @@ class Parser {
 				t = token();
 				switch( t ) {
 				case TBrClose: break;
-				case TId("var"):
+				case TId("var"), TId("final"):
 					var name = getIdent();
 					ensure(TDoubleDot);
+					if( t.match(TId("final")) ) {
+						if( meta == null ) meta = [];
+						meta.push({ name : ":final", params : [] });
+					}
 					fields.push( { name : name, t : parseType(), meta : meta } );
 					meta = null;
 					ensure(TSemicolon);
@@ -1230,7 +1240,7 @@ class Parser {
 						ret : inf.ret,
 					}),
 				};
-			case "var":
+			case "var", "final":
 				var name = getIdent();
 				var get = null, set = null;
 				if( maybe(TPOpen) ) {
