@@ -225,6 +225,30 @@ class Bytes {
 			}
 			bout.addByte(255);
 			if( def == null ) bout.addByte(255) else doEncode(def);
+		case EImport(v):
+		    doEncodeString(v);
+		case EPackage(name):
+		    doEncodeString(name);
+		case EClass(name, e, extend):
+		    doEncodeString(name);
+		    doEncode(e);
+		    if( extend == null )
+		        bout.addByte(0);
+		    else {
+		        bout.addByte(1);
+		        doEncodeString(extend);
+		    }
+		case EUsing(name):
+		    doEncodeString(name);
+		case ETypedef(name, t):
+		    doEncodeString(name);
+		    doEncode(t);
+		case EClass(name, e, extend):
+			doEncodeString(name);
+		case EEnum(name, values):
+		    doEncodeString(name);
+		    bout.addByte(values.length);
+		    for (value in values) doEncodeString(value);
 		case EMeta(name,args,e):
 			doEncodeString(name);
 			bout.addByte(args == null ? 0 : args.length + 1);
@@ -362,6 +386,22 @@ class Bytes {
 			EMeta(name, args, doDecode());
 		case 26:
 			ECheckType(doDecode(), CTPath(["Void"]));
+		case 27:
+		    EImport(doDecodeString());
+		case 28:
+		    EUsing(doDecodeString());
+		case 29:
+		    var name = doDecodeString();
+		    var t = doDecode();
+		    ETypedef(name, t);
+		case 30:
+		    var enumName = doDecodeString();
+		    var values = [];
+		    var count = bin.get(pin++);
+		    for (i in 0...count) values.push(doDecodeString());
+		    EEnum(enumName, values);
+		case 31:
+		    EPackage(doDecodeString());
 		case 255:
 			null;
 		default:
@@ -379,5 +419,4 @@ class Bytes {
 		var b = new Bytes(bytes);
 		return b.doDecode();
 	}
-
 }

@@ -476,8 +476,8 @@ class Checker {
 		case CTOpt(t):
 			return makeType(t,e);
 		case CTExpr(_):
-			error("Unsupported expr type parameter", e);
-			return null;
+		    error("Unsupported expr type parameter", e);
+		    return null;
 		}
 	}
 
@@ -1371,5 +1371,4 @@ class Checker {
 		unify(ft != null ? ft : itt,iter,it);
 		return t;
 	}
-
 }

@@ -90,7 +90,7 @@ class Macro {
 		}
 	}
 
-	function map<T,R>( a : Array<T>, f : T -> R ) : Array<R> {
+	function map<T, R>( a : Array<T>, f : T -> R ) : Array<R> {
 		var b = new Array();
 		for( x in a )
 			b.push(f(x));
@@ -105,8 +105,8 @@ class Macro {
 			if( args != null ) {
 				for( t in args )
 					params.push(switch( t ) {
-					case CTExpr(e): TPExpr(convert(e));
-					default: TPType(convertType(t));
+					    case CTExpr(e): TPExpr(convert(e));
+					    default: TPType(convertType(t));
 					});
 			}
 			TPath({
@@ -132,7 +132,7 @@ class Macro {
 			}
 			TAnonymous(tf);
 		case CTExpr(_):
-			throw "assert";
+		    throw "assert";
 		};
 	}
 

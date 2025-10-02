@@ -99,7 +99,7 @@ class Printer {
 			type(t);
 			add(")");
 		case CTExpr(e):
-			expr(e);
+ 			expr(e);
 		}
 	}
 
@@ -111,12 +111,12 @@ class Printer {
 	}
 
 	function addConst( c : Const ) {
-		switch( c ) {
-		case CInt(i): add(i);
-		case CFloat(f): add(f);
-		case CString(s): add('"'); add(s.split('"').join('\\"').split("\n").join("\\n").split("\r").join("\\r").split("\t").join("\\t")); add('"');
-		}
-	}
+	    switch( c ) {
+	        case CInt(i): add(i);
+	        case CFloat(f): add(f);
+	        case CString(s): add('"'); add(s.split('"').join('\\"').split("\n").join("\\n").split("\r").join("\\r").split("\t").join("\\t")); add('"');
+	    }
+ 	}
 
 	function expr( e : Expr ) {
 		if( e == null ) {
@@ -307,6 +307,31 @@ class Printer {
 				add(";\n");
 			}
 			add("}");
+		case EImport(v, as):
+		    add("import " + v + as != null ? ' as $as' : '');
+		case EUsing(name):
+		    add("using " + name);
+		    add(";");
+		case ETypedef(name, t):
+		    add("typedef " + name + " = {");
+		    add('\n' + t);
+		    //type(t);
+		    add("\n}");
+		case EEnum(name, values):
+		    add("enum " + name + " { ");
+		    var first = true;
+		    if (first) first = false; else add(", ");
+		    add(values);
+		    add("\n}");
+		case EPackage(name):
+		    if (name == null || name == '') add('package;');
+		    else add('package ' + name);
+		case EClass(name, e, extend):
+			add('class ' + name);
+			if( extend != null ) {
+				add(' extends ' + extend);
+			}
+			expr(e);
 		case EMeta(name, args, e):
 			add("@");
 			add(name);
@@ -353,6 +378,4 @@ class Printer {
 		return message;
 		#end
 	}
-
-
 }

@@ -23,7 +23,6 @@ package hscript;
 import hscript.Expr;
 
 class Tools {
-
 	public static function iter( e : Expr, f : Expr -> Void ) {
 		switch( expr(e) ) {
 		case EConst(_), EIdent(_):
@@ -57,6 +56,12 @@ class Tools {
 			if( def != null ) f(def);
 		case EMeta(name, args, e): if( args != null ) for( a in args ) f(a); f(e);
 		case ECheckType(e,_): f(e);
+		case EImport(v):
+		case EUsing(v):
+		case ETypedef(v, e):
+		case EEnum(v, e):
+		case EPackage(name):
+		case EClass(name, e, extend):
 		}
 	}
 
@@ -86,6 +91,12 @@ class Tools {
 		case ESwitch(e, cases, def): ESwitch(f(e), [for( c in cases ) { values : [for( v in c.values ) f(v)], expr : f(c.expr) } ], def == null ? null : f(def));
 		case EMeta(name, args, e): EMeta(name, args == null ? null : [for( a in args ) f(a)], f(e));
 		case ECheckType(e,t): ECheckType(f(e), t);
+		case EImport(v): EImport(v);
+		case EUsing(v): EUsing(v);
+		case ETypedef(v, e): ETypedef(v, e);
+		case EEnum(v, e): EEnum(v, e);
+		case EPackage(name): EPackage(name);
+		case EClass(name, e, extend): EClass(name, f(e), extend == null ? null : extend);
 		}
 		return mk(edef, e);
 	}
@@ -105,5 +116,30 @@ class Tools {
 		return e;
 		#end
 	}
-
+	
+	public static function getNestedClasses(name:String):Array<String>
+	{
+	    var classes:Array<String> = [];
+	    var path = name.split('.');
+	    if (path.length > 0)
+	    {
+	        classes.push(path.slice(0, path.length - 1).join('.'));
+	    }
+	   
+	   return classes;
+	}
+	public static function resolveImport(path:String):Dynamic
+	{
+	    var importedClass:Dynamic = Type.resolveClass(path) != null ? Type.resolveClass(path) : Type.resolveEnum(path);
+	    if (importedClass == null)
+	    {
+	        for (nested in getNestedClasses(path))
+	        {
+	            importedClass = Type.resolveClass(nested) != null ? Type.resolveClass(nested) : Type.resolveEnum(nested);
+	            if (importedClass != null)
+	                return importedClass;
+	        }
+	    }
+	    return importedClass;
+	}
 }

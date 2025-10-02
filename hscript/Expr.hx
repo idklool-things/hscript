@@ -24,7 +24,7 @@ package hscript;
 enum Const {
 	CInt( v : Int );
 	CFloat( f : Float );
-	CString( s : String );
+	CString( s : String);
 }
 
 #if hscriptPos
@@ -67,6 +67,12 @@ enum Expr {
 	EDoWhile( cond : Expr, e : Expr);
 	EMeta( name : String, args : Array<Expr>, e : Expr );
 	ECheckType( e : Expr, t : CType );
+	EImport(v:String, ?as:String);
+	EUsing(v:String);
+	ETypedef(name:String, fields:CType);
+	EEnum(name:String, e:Expr);
+	EPackage(?name:String);
+	EClass(name:String, e:Expr, ?extend:String);
 }
 
 typedef Argument = { name : String, ?t : CType, ?opt : Bool, ?value : Expr };

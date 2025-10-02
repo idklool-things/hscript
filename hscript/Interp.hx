@@ -31,7 +31,6 @@ private enum Stop {
 }
 
 class Interp {
-
 	public var variables : Map<String,Dynamic>;
 	var locals : Map<String,{ r : Dynamic }>;
 	var binops : Map<String, Expr -> Expr -> Dynamic >;
@@ -40,6 +39,10 @@ class Interp {
 	var inTry : Bool;
 	var declared : Array<{ n : String, old : { r : Dynamic } }>;
 	var returnValue : Dynamic;
+	public var classObjects:Array<Dynamic> = [];
+	public var usings:Array<Dynamic> = [];
+	public var imports:Map<String, Dynamic> = [];
+	public var classes:Map<String, Dynamic> = new Map();
 
 	#if hscriptPos
 	var curExpr : Expr;
@@ -54,10 +57,13 @@ class Interp {
 
 	private function resetVariables(){
 		variables = new Map<String,Dynamic>();
+		usings = [];
+		imports = new Map<String, Dynamic>();
+		classes = new Map<String, Dynamic>();
 		variables.set("null",null);
 		variables.set("true",true);
 		variables.set("false",false);
-		variables.set("trace", Reflect.makeVarArgs(function(el) {
+		variables.set("trace", Reflect.makeVarArgs(el -> {
 			var inf = posInfos();
 			var v = el.shift();
 			if( el.length > 0 ) inf.customParams = el;
@@ -93,10 +99,26 @@ class Interp {
 		binops.set("<=",function(e1,e2) return me.expr(e1) <= me.expr(e2));
 		binops.set(">",function(e1,e2) return me.expr(e1) > me.expr(e2));
 		binops.set("<",function(e1,e2) return me.expr(e1) < me.expr(e2));
-		binops.set("||",function(e1,e2) return me.expr(e1) == true || me.expr(e2) == true);
-		binops.set("&&",function(e1,e2) return me.expr(e1) == true && me.expr(e2) == true);
+		binops.set("||",function(e1,e2) return me.expr(e1) || me.expr(e2));
+		binops.set("&&",function(e1,e2) return me.expr(e1) && me.expr(e2));
 		binops.set("=",assign);
-		binops.set("...",function(e1,e2) return new IntIterator(me.expr(e1),me.expr(e2)));
+		binops.set('...', (e1, e2) -> {
+			var start = me.expr(e1);
+        	var end = me.expr(e2);
+			return {
+				hasNext: () -> start < end,
+				next: () -> start++
+			};
+    });
+    binops.set('??', (e1,e2) -> {
+        var v1 = me.expr(e1);
+        return v1 != null ? v1 : me.expr(e2);
+    });
+    binops.set('??' + '=', (e1, e2) -> {
+        var v1 = me.expr(e1);
+        if (v1 == null) return me.assign(e1, e2);
+        return v1;
+    });
 		binops.set("is",function(e1,e2) return #if (haxe_ver >= 4.2) Std.isOfType #else Std.is #end (me.expr(e1), me.expr(e2)));
 		assignOp("+=",function(v1:Dynamic,v2:Dynamic) return v1 + v2);
 		assignOp("-=",function(v1:Float,v2:Float) return v1 - v2);
@@ -282,11 +304,31 @@ class Interp {
 		#end
 	}
 
-	function resolve( id : String ) : Dynamic {
-		var v = variables.get(id);
-		if( v == null && !variables.exists(id) )
-			error(EUnknownVariable(id));
-		return v;
+	function resolve(id: String): Dynamic {
+	    if (id == 'null') return null;
+
+	    var localVar = locals.get(id);
+	    if (localVar != null) return localVar.r;
+
+	    var globalVar = variables.get(id);
+	    if (globalVar != null) return globalVar;
+
+	    var importsVar = imports.get(id);
+	    if (importsVar != null) return importsVar;
+		
+		// This should allow you using classes without importing them first (But you can't use like, `flixel.FlxSprite` ig)
+		var resolvedClass:Dynamic = Tools.resolveImport(id);
+		if (resolvedClass != null) return resolvedClass;
+
+	    if (classObjects != null) {
+	        for (cls in classObjects) {
+	            var property = get(cls, id);
+	            if (property != null) return property;
+	        }
+	    }
+
+	    error(EUnknownVariable(id));
+	    return null;
 	}
 
 	public function expr( e : Expr ) : Dynamic {
@@ -341,9 +383,7 @@ class Interp {
 				error(EInvalidOp(op));
 			}
 		case ECall(e,params):
-			var args = new Array();
-			for( p in params )
-				args.push(expr(p));
+			var args = [for (p in params) expr(p)];
 
 			switch( Tools.expr(e) ) {
 			case EField(e,f):
@@ -354,7 +394,7 @@ class Interp {
 				return call(null,expr(e),args);
 			}
 		case EIf(econd,e1,e2):
-			return if( expr(econd) == true ) expr(e1) else if( e2 == null ) null else expr(e2);
+			return if( expr(econd) ) expr(e1) else if( e2 == null ) null else expr(e2);
 		case EWhile(econd,e):
 			whileLoop(econd,e);
 			return null;
@@ -508,7 +548,7 @@ class Interp {
 				set(o,f.name,expr(f.e));
 			return o;
 		case ETernary(econd,e1,e2):
-			return if( expr(econd) == true ) expr(e1) else expr(e2);
+			return if( expr(econd) ) expr(e1) else expr(e2);
 		case ESwitch(e, cases, def):
 			var val : Dynamic = expr(e);
 			var match = false;
@@ -526,10 +566,57 @@ class Interp {
 			if( !match )
 				val = def == null ? null : expr(def);
 			return val;
+		case EImport(path, as):
+		    var paths = path.split('.');
+		    var importedClass:Dynamic = Tools.resolveImport(path);
+		    if (importedClass == null) error(ECustom("Cannot resolve import: " + path));
+		    imports.set(as == null ? paths.pop() : as, importedClass);
+		    return null;
 		case EMeta(_, _, e):
 			return expr(e);
 		case ECheckType(e,_):
 			return expr(e);
+		case EUsing(path):
+			var cls = Tools.resolveImport(path);
+			if (cls == null) error(ECustom("Cannot resolve using: " + path));
+			usings.push(cls);
+			return null;
+		case ETypedef(name, t):
+		    var create = (args:Array<Dynamic>) -> {
+		        var obj = {};
+		        var input = args.length > 0 ? args[0] : null;
+		        if (input != null) {
+		          for (f in Reflect.fields(input)) {
+		              set(obj, f, get(input, f));
+		          }
+		        }
+		        return obj;
+		    };
+		    variables.set(name, Reflect.makeVarArgs(create));
+		    return null;
+		case EEnum(name, e):
+		    var enumType:Dynamic = resolve(name);
+
+		    var params = [];
+		    switch(Tools.expr(e))
+		    {
+		        case EArrayDecl(arr):
+		            for (param in arr) params.push(expr(param));
+		        case EConst(_), EIdent(_), EField(_), ECall(_), EObject(_), EArray(_), ENew(_):
+		            params.push(expr(e));
+		        default:
+		            error(ECustom('Invalid parameters for enum: ' + name));
+		    }
+		    try {
+		        return Type.createEnum(enumType, name, params);
+		    } catch (err:Dynamic) {
+		        error(ECustom('Failed to create enum ' + name + ': ' + Std.string(err)));
+		    }
+		    return null;
+		case EPackage(v):
+		    return null;
+		case EClass(name, e, extend):
+			// Later.
 		}
 		return null;
 	}
@@ -540,13 +627,13 @@ class Interp {
 			if( !loopRun(() -> expr(e)) )
 				break;
 		}
-		while( expr(econd) == true );
+		while( expr(econd) );
 		restore(old);
 	}
 
 	function whileLoop(econd,e) {
 		var old = declared.length;
-		while( expr(econd) == true ) {
+		while( expr(econd) ) {
 			if( !loopRun(() -> expr(e)) )
 				break;
 		}
@@ -670,6 +757,11 @@ class Interp {
 	}
 
 	function fcall( o : Dynamic, f : String, args : Array<Dynamic> ) : Dynamic {
+	    for (usingCls in usings) {
+ 	        if (Reflect.isFunction(get(usingCls, f))) {
+ 	            return Reflect.callMethod(usingCls, get(usingCls, f), o != null ? [o].concat(args) : args);
+ 	        }
+	    }
 		return call(o, get(o, f), args);
 	}
 
@@ -678,9 +770,7 @@ class Interp {
 	}
 
 	function cnew( cl : String, args : Array<Dynamic> ) : Dynamic {
-		var c = Type.resolveClass(cl);
-		if( c == null ) c = resolve(cl);
+		var c:Dynamic = resolve(cl) != null ? resolve(cl) : Type.resolveClass(cl);
 		return Type.createInstance(c,args);
 	}
-
 }
