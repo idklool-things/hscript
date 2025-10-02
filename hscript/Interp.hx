@@ -578,27 +578,15 @@ class Interp {
 			if( !match )
 				val = def == null ? null : expr(def);
 			return val;
-<<<<<<< HEAD
-<<<<<<< HEAD
 		case EImport(path, as):
 		    var paths = path.split('.');
 		    var importedClass:Dynamic = Tools.resolveImport(path);
 		    if (importedClass == null) error(ECustom("Cannot resolve import: " + path));
 		    imports.set(as == null ? paths.pop() : as, importedClass);
 		    return null;
-		case EMeta(_, _, e):
-			return expr(e);
-		case ECheckType(e,_):
-=======
 		case EMeta(meta, args, e):
 			return exprMeta(meta, args, e);
 		case ECheckType(e,_), ECast(e,_):
->>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
-=======
-		case EMeta(meta, args, e):
-			return exprMeta(meta, args, e);
-		case ECheckType(e,_), ECast(e,_):
->>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
 			return expr(e);
 		case EUsing(path):
 			var cls = Tools.resolveImport(path);

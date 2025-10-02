@@ -1692,9 +1692,6 @@ class Checker {
 		unify(ft != null ? ft : itt,iter,it);
 		return t;
 	}
-<<<<<<< HEAD
-=======
-
 
 	function getKeyIteratorTypes( itt : TType, it : Expr ) {
 		switch( follow(itt) ) {
@@ -1723,10 +1720,4 @@ class Checker {
 		unify(ft != null ? ft : itt,iter,it);
 		return { key : key, value : value };
 	}
-
-
-<<<<<<< HEAD
->>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
-=======
->>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
 }

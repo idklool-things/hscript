@@ -482,9 +482,7 @@ class Bytes {
 			var args = count == 0 ? null : [for( i in 0...count - 1 ) doDecode()];
 			EMeta(name, args, doDecode());
 		case 26:
-<<<<<<< HEAD
-<<<<<<< HEAD
-			ECheckType(doDecode(), CTPath(["Void"]));
+			ECheckType(doDecode(), decodeType());
 		case 27:
 		    EImport(doDecodeString());
 		case 28:
@@ -501,18 +499,10 @@ class Bytes {
 		    EEnum(enumName, values);
 		case 31:
 		    EPackage(doDecodeString());
-=======
-=======
->>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
-			ECheckType(doDecode(), decodeType());
 		case 27:
 			EForGen(doDecode(), doDecode());
 		case 28:
 			ECast(doDecode(), decodeType());
-<<<<<<< HEAD
->>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
-=======
->>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
 		case 255:
 			null;
 		default:
