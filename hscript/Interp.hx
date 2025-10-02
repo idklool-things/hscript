@@ -404,6 +404,18 @@ class Interp {
 		case EFor(v,it,e):
 			forLoop(v,it,e);
 			return null;
+		case EForGen(it,e):
+			Tools.getKeyIterator(it, function(vk,vv,it) {
+				if( vk == null ) {
+					#if hscriptPos
+					curExpr = it;
+					#end
+					error(ECustom("Invalid for expression"));
+					return;
+				}
+				forKeyValueLoop(vk,vv,it,e);
+			});
+			return null;
 		case EBreak:
 			throw SBreak;
 		case EContinue:
@@ -566,6 +578,7 @@ class Interp {
 			if( !match )
 				val = def == null ? null : expr(def);
 			return val;
+<<<<<<< HEAD
 		case EImport(path, as):
 		    var paths = path.split('.');
 		    var importedClass:Dynamic = Tools.resolveImport(path);
@@ -575,6 +588,11 @@ class Interp {
 		case EMeta(_, _, e):
 			return expr(e);
 		case ECheckType(e,_):
+=======
+		case EMeta(meta, args, e):
+			return exprMeta(meta, args, e);
+		case ECheckType(e,_), ECast(e,_):
+>>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
 			return expr(e);
 		case EUsing(path):
 			var cls = Tools.resolveImport(path);
@@ -621,6 +639,10 @@ class Interp {
 		return null;
 	}
 
+	function exprMeta(meta,args,e) : Dynamic {
+		return expr(e);
+	}
+
 	function doWhileLoop(econd,e) {
 		var old = declared.length;
 		do {
@@ -641,15 +663,27 @@ class Interp {
 	}
 
 	function makeIterator( v : Dynamic ) : Iterator<Dynamic> {
-		#if ((flash && !flash9) || (php && !php7 && haxe_ver < '4.0.0'))
-		if ( v.iterator != null ) v = v.iterator();
-		#elseif js
+		#if js
 		// don't use try/catch (very slow)
 		if( v is Array )
 			return (v : Array<Dynamic>).iterator();
 		if( v.iterator != null ) v = v.iterator();
 		#else
-		try v = v.iterator() catch( e : Dynamic ) {};
+		#if (cpp) if ( v.iterator != null ) #end
+			try v = v.iterator() catch( e : Dynamic ) {};
+		#end
+		if( v.hasNext == null || v.next == null ) error(EInvalidIterator(v));
+		return v;
+	}
+
+	function makeKeyValueIterator( v : Dynamic ) : KeyValueIterator<Dynamic,Dynamic> {
+		#if js
+		// don't use try/catch (very slow)
+		if( v is Array )
+			return (v : Array<Dynamic>).keyValueIterator();
+		if( v.keyValueIterator != null ) v = v.keyValueIterator();
+		#else
+		try v = v.keyValueIterator() catch( e : Dynamic ) {};
 		#end
 		if( v.hasNext == null || v.next == null ) error(EInvalidIterator(v));
 		return v;
@@ -661,6 +695,21 @@ class Interp {
 		var it = makeIterator(expr(it));
 		while( it.hasNext() ) {
 			locals.set(n,{ r : it.next() });
+			if( !loopRun(() -> expr(e)) )
+				break;
+		}
+		restore(old);
+	}
+
+	function forKeyValueLoop(vk,vv,it,e) {
+		var old = declared.length;
+		declared.push({ n : vk, old : locals.get(vk) });
+		declared.push({ n : vv, old : locals.get(vv) });
+		var it = makeKeyValueIterator(expr(it));
+		while( it.hasNext() ) {
+			var v = it.next();
+			locals.set(vk,{ r : v.key });
+			locals.set(vv,{ r : v.value });
 			if( !loopRun(() -> expr(e)) )
 				break;
 		}
@@ -706,6 +755,8 @@ class Interp {
 			isAllObject = isAllObject && Reflect.isObject(key);
 			isAllEnum = isAllEnum && Reflect.isEnumValue(key);
 		}
+
+		#if (haxe_ver >= 4.1)
 		if( isAllInt ) {
 			var m = new Map<Int,Dynamic>();
 			for( i => key in keys )
@@ -730,6 +781,20 @@ class Interp {
 				m.set(key, values[i]);
 			return m;
 		}
+		#else
+		var m:Dynamic = {
+			if ( isAllInt ) new haxe.ds.IntMap<Dynamic>();
+			else if ( isAllString ) new haxe.ds.StringMap<Dynamic>();
+			else if ( isAllEnum ) new haxe.ds.EnumValueMap<Dynamic, Dynamic>();
+			else if ( isAllObject ) new haxe.ds.ObjectMap<Dynamic, Dynamic>();
+			else null;
+		}
+		if( m != null ) {
+			for ( n in 0...keys.length )
+				setMapValue(m, keys[n], values[n]);
+			return m;
+		}
+		#end
 		error(ECustom("Invalid map keys "+keys));
 		return null;
 	}

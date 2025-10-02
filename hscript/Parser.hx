@@ -115,8 +115,14 @@ class Parser {
 			["..."],
 			["&&"],
 			["||"],
+<<<<<<< HEAD
 			["=","+=","-=","*=","/=","%=","<<=",">>=",">>>=","|=","&=","^=","=>", '??' + '='],
 			["->"]
+=======
+			["=","+=","-=","*=","/=","%=","<<=",">>=",">>>=","|=","&=","^=","=>"],
+			["->"],
+			["in","is"]
+>>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
 		];
 		opPriority = new Map();
 		opRightAssoc = new Map();
@@ -248,11 +254,11 @@ class Parser {
 		#end
 	}
 
-	inline function mk(e,?pmin,?pmax) : Expr {
+	inline function mk(e,pmin=-1,pmax=-1) : Expr {
 		#if hscriptPos
 		if( e == null ) return null;
-		if( pmin == null ) pmin = tokenMin;
-		if( pmax == null ) pmax = tokenMax;
+		if( pmin < 0 ) pmin = tokenMin;
+		if( pmax < 0 ) pmax = tokenMax;
 		return { e : e, pmin : pmin, pmax : pmax, origin : origin, line : line };
 		#else
 		return e;
@@ -270,9 +276,10 @@ class Parser {
 		case EUnop(_,prefix,e): !prefix && isBlock(e);
 		case EWhile(_,e): isBlock(e);
 		case EDoWhile(_,e): isBlock(e);
-		case EFor(_,_,e): isBlock(e);
+		case EFor(_,_,e), EForGen(_, e): isBlock(e);
 		case EReturn(e): e != null && isBlock(e);
 		case ETry(_, _, _, e): isBlock(e);
+		case EMeta(":markup",_,_): true;
 		case EMeta(_, _, e): isBlock(e);
 		case ETypedef(_, _): true;
 		default: false;
@@ -352,7 +359,7 @@ class Parser {
 			if( tk == TPClose ) {
 				ensureToken(TOp("->"));
 				var eret = parseExpr();
-				return mk(EFunction([], mk(EReturn(eret),p1)), p1);
+				return mkLambda([],eret,p1);
 			}
 			push(tk);
 			var e = parseExpr();
@@ -378,6 +385,8 @@ class Parser {
 				case EIdent(v): return parseLambda([{name:v}], pmin(e));
 				default:
 				}
+			case TEof if( resumeErrors ):
+				return e;
 			default:
 			}
 			return unexpected(tk);
@@ -441,6 +450,32 @@ class Parser {
 			}
 			if( opPriority.get(op) < 0 )
 				return makeUnop(op,parseExpr());
+			if( op == "<" ) {
+				var start = readPos - 1;
+				var ident = getIdent();
+				if( #if hscriptPos tokens.length != 0 #else !tokens.isEmpty() #end )
+					throw "assert";
+				if( readPos == start + ident.length + 1 ) {
+					var endTag = "</"+ident+">";
+					var end = input.indexOf(endTag, readPos);
+					if( end < 0 ) {
+						endTag = '/>';
+						end = input.indexOf(endTag, readPos);
+					}
+					if( end >= 0 ) {
+						readPos = end + endTag.length;
+						char = -1;
+						start--;
+						var end = readPos - 1;
+						#if hscriptPos
+						tokenMin = start + offset;
+						tokenMax = end + offset;
+						#end
+						var str = input.substr(start,end - start + 1);
+						return mk(EMeta(":markup",[],mk(EConst(CString(str)))));
+					}
+				}
+			}
 			return unexpected(tk);
 		case TBkOpen:
 			var a = new Array();
@@ -498,7 +533,11 @@ class Parser {
 		}
 		ensureToken(TOp("->"));
 		var eret = parseExpr();
-		return mk(EFunction(args, mk(EReturn(eret),pmin)), pmin);
+		return mkLambda(args,eret,pmin);
+	}
+
+	function mkLambda(args,eret,p) {
+		return mk(EFunction(args, mk(EMeta(":lambda",[],mk(EReturn(eret),pmin(eret))),p)),p);
 	}
 
 	function parseMetaArgs() {
@@ -530,6 +569,8 @@ class Parser {
 		var edef = switch( expr(e) ) {
 		case EFor(v, it, e2):
 			EFor(v, it, mapCompr(tmp, e2));
+		case EForGen(it, e2):
+			EForGen(it, mapCompr(tmp, e2));
 		case EWhile(cond, e2):
 			EWhile(cond, mapCompr(tmp, e2));
 		case EDoWhile(cond, e2):
@@ -561,7 +602,8 @@ class Parser {
 			return mk(EBinop(op,e1,e),pmin(e1),pmax(e1));
 		return switch( expr(e) ) {
 		case EBinop(op2,e2,e3):
-			if( opPriority.get(op) <= opPriority.get(op2) && !opRightAssoc.exists(op) )
+			var delta = opPriority.get(op) - opPriority.get(op2);
+			if( delta < 0 || (delta == 0 && !opRightAssoc.exists(op)) )
 				mk(EBinop(op2,makeBinop(op,e1,e2),e3),pmin(e1),pmax(e3));
 			else
 				mk(EBinop(op, e1, e), pmin(e1), pmax(e));
@@ -634,12 +676,19 @@ class Parser {
 			mk(EDoWhile(econd,e),p1,pmax(econd));
 		case "for":
 			ensure(TPOpen);
-			var vname = getIdent();
-			ensureToken(TId("in"));
-			var eiter = parseExpr();
+			var eit = parseExpr();
 			ensure(TPClose);
 			var e = parseExpr();
-			mk(EFor(vname,eiter,e),p1,pmax(e));
+			switch( expr(eit) ) {
+			case EBinop("in",ev,eit):
+				switch( expr(ev) ) {
+				case EIdent(v):
+					return mk(EFor(v,eit,e),p1,pmax(e));
+				default:
+				}
+			default:
+			}
+			mk(EForGen(eit,e),p1,pmax(e));
 		case "break": mk(EBreak);
 		case "continue": mk(EContinue);
 		case "else": unexpected(TId(id));
@@ -767,6 +816,7 @@ class Parser {
 				}
 			}
 			mk(ESwitch(e, cases, def), p1, tokenMax);
+<<<<<<< HEAD
 		case 'import':
 		    var path = [getIdent()];
 		    var star = false;
@@ -834,6 +884,20 @@ class Parser {
 			}
 
 			mk(EClass(name, mk(EBlock(fields)), extend), p1);
+=======
+		case "cast":
+			var tk = token();
+			if( tk == TPOpen ) {
+				var e = parseExpr();
+				ensure(TComma);
+				var t = parseType();
+				mk(ECast(e,t), p1, tokenMax);
+			} else {
+				push(tk);
+				var e = parseExpr();
+				mk(ECast(e,null), p1, tokenMax);
+			}
+>>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
 		default:
 			null;
 		}
@@ -899,10 +963,10 @@ class Parser {
 				switch( expr(e1) ) {
 				case EIdent(i), EParent(expr(_) => EIdent(i)):
 					var eret = parseExpr();
-					return mk(EFunction([{ name : i }], mk(EReturn(eret),pmin(eret))), pmin(e1));
+					return mkLambda([{ name : i }], eret, pmin(e1));
 				case ECheckType(expr(_) => EIdent(i), t):
 					var eret = parseExpr();
-					return mk(EFunction([{ name : i, t : t }], mk(EReturn(eret),pmin(eret))), pmin(e1));
+					return mkLambda([{ name : i, t : t }], eret, pmin(e1));
 				default:
 				}
 				unexpected(tk);
@@ -916,8 +980,8 @@ class Parser {
 				return parseExprNext(mk(EUnop(op,false,e1),pmin(e1)));
 			}
 			return makeBinop(op,e1,parseExpr());
-		case TId(op) if ( op == 'is' ):
-			return makeBinop(op,e1,parseExpr());
+		case TId(op) if( opPriority.exists(op) ):
+			return parseExprNext(makeBinop(op,e1,parseExpr()));
 		case TDot:
 			var field = getIdent();
 			return parseExprNext(mk(EField(e1,field),pmin(e1)));
@@ -1271,8 +1335,18 @@ class Parser {
 					unexpected(t);
 				}
 			}
+			var name = null;
+			if ( maybe(TId("as")) && !star) {
+				var t = token();
+				switch( t ) {
+				case TId(id):
+					name = id;
+				default:
+					unexpected(t);
+				}
+			}
 			ensure(TSemicolon);
-			return DImport(path, star);
+			return DImport(path, star, name);
 		case "class":
 			var name = getIdent();
 			var params = parseParams();
