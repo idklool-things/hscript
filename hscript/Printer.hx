@@ -208,6 +208,11 @@ class Printer {
 			expr(it);
 			add(" ) ");
 			expr(e);
+		case EForGen(it, e):
+			add("for( ");
+			expr(it);
+			add(" ) ");
+			expr(e);
 		case EBreak:
 			add("break");
 		case EContinue:
@@ -327,6 +332,17 @@ class Printer {
 			add(" : ");
 			addType(t);
 			add(")");
+		case ECast(e,t):
+			if( t == null ) {
+				add("cast ");
+				expr(e);
+			} else {
+				add("cast(");
+				expr(e);
+				add(",");
+				addType(t);
+				add(")");
+			}
 		}
 	}
 

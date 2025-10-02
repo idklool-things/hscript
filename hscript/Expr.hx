@@ -67,6 +67,8 @@ enum Expr {
 	EDoWhile( cond : Expr, e : Expr);
 	EMeta( name : String, args : Array<Expr>, e : Expr );
 	ECheckType( e : Expr, t : CType );
+	EForGen( it : Expr, e : Expr );
+	ECast( e : Expr, ?t : CType );
 }
 
 typedef Argument = { name : String, ?t : CType, ?opt : Bool, ?value : Expr };
@@ -120,7 +122,7 @@ enum Error {
 
 enum ModuleDecl {
 	DPackage( path : Array<String> );
-	DImport( path : Array<String>, ?everything : Bool );
+	DImport( path : Array<String>, ?everything : Bool, ?name : String );
 	DClass( c : ClassDecl );
 	DTypedef( c : TypeDecl );
 }

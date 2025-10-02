@@ -38,6 +38,7 @@ class Tools {
 		case EWhile(c, e): f(c); f(e);
 		case EDoWhile(c, e): f(c); f(e);
 		case EFor(_, it, e): f(it); f(e);
+		case EForGen(it, e): f(it); f(e);
 		case EBreak,EContinue:
 		case EFunction(_, e, _, _): f(e);
 		case EReturn(e): if( e != null ) f(e);
@@ -57,6 +58,7 @@ class Tools {
 			if( def != null ) f(def);
 		case EMeta(name, args, e): if( args != null ) for( a in args ) f(a); f(e);
 		case ECheckType(e,_): f(e);
+		case ECast(e,_): f(e);
 		}
 	}
 
@@ -74,6 +76,7 @@ class Tools {
 		case EWhile(c, e): EWhile(f(c),f(e));
 		case EDoWhile(c, e): EDoWhile(f(c),f(e));
 		case EFor(v, it, e): EFor(v, f(it), f(e));
+		case EForGen(it, e): EForGen(f(it), f(e));
 		case EFunction(args, e, name, t): EFunction(args, f(e), name, t);
 		case EReturn(e): EReturn(if( e != null ) f(e) else null);
 		case EArray(e, i): EArray(f(e),f(i));
@@ -86,6 +89,7 @@ class Tools {
 		case ESwitch(e, cases, def): ESwitch(f(e), [for( c in cases ) { values : [for( v in c.values ) f(v)], expr : f(c.expr) } ], def == null ? null : f(def));
 		case EMeta(name, args, e): EMeta(name, args == null ? null : [for( a in args ) f(a)], f(e));
 		case ECheckType(e,t): ECheckType(f(e), t);
+		case ECast(e,t): ECast(f(e),t);
 		}
 		return mk(edef, e);
 	}
@@ -104,6 +108,26 @@ class Tools {
 		#else
 		return e;
 		#end
+	}
+
+	public static inline function getKeyIterator<T>( e : Expr, callb : String -> String -> Expr -> T ) {
+		var key = null, value = null, it = e;
+		switch( expr(it) ) {
+		case EBinop("in", ekv, eiter):
+			switch( expr(ekv) ) {
+			case EBinop("=>",v1,v2):
+				switch( [expr(v1),expr(v2)] ) {
+				case [EIdent(v1), EIdent(v2)]:
+					key = v1;
+					value = v2;
+					it = eiter;
+				default:
+				}
+			default:
+			}
+		default:
+		}
+		return callb(key,value,it);
 	}
 
 }
