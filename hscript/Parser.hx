@@ -116,8 +116,14 @@ class Parser {
 			["&&"],
 			["||"],
 <<<<<<< HEAD
+<<<<<<< HEAD
 			["=","+=","-=","*=","/=","%=","<<=",">>=",">>>=","|=","&=","^=","=>", '??' + '='],
 			["->"]
+=======
+			["=","+=","-=","*=","/=","%=","<<=",">>=",">>>=","|=","&=","^=","=>"],
+			["->"],
+			["in","is"]
+>>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
 =======
 			["=","+=","-=","*=","/=","%=","<<=",">>=",">>>=","|=","&=","^=","=>"],
 			["->"],
@@ -817,6 +823,7 @@ class Parser {
 			}
 			mk(ESwitch(e, cases, def), p1, tokenMax);
 <<<<<<< HEAD
+<<<<<<< HEAD
 		case 'import':
 		    var path = [getIdent()];
 		    var star = false;
@@ -885,6 +892,8 @@ class Parser {
 
 			mk(EClass(name, mk(EBlock(fields)), extend), p1);
 =======
+=======
+>>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
 		case "cast":
 			var tk = token();
 			if( tk == TPOpen ) {
@@ -897,6 +906,9 @@ class Parser {
 				var e = parseExpr();
 				mk(ECast(e,null), p1, tokenMax);
 			}
+<<<<<<< HEAD
+>>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
+=======
 >>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
 		default:
 			null;

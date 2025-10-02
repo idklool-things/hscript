@@ -1725,5 +1725,8 @@ class Checker {
 	}
 
 
+<<<<<<< HEAD
+>>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
+=======
 >>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
 }

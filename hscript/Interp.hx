@@ -579,6 +579,7 @@ class Interp {
 				val = def == null ? null : expr(def);
 			return val;
 <<<<<<< HEAD
+<<<<<<< HEAD
 		case EImport(path, as):
 		    var paths = path.split('.');
 		    var importedClass:Dynamic = Tools.resolveImport(path);
@@ -588,6 +589,11 @@ class Interp {
 		case EMeta(_, _, e):
 			return expr(e);
 		case ECheckType(e,_):
+=======
+		case EMeta(meta, args, e):
+			return exprMeta(meta, args, e);
+		case ECheckType(e,_), ECast(e,_):
+>>>>>>> 92ffe9c519bbccf783df0b3400698c5b3cc645ef
 =======
 		case EMeta(meta, args, e):
 			return exprMeta(meta, args, e);
