@@ -75,8 +75,6 @@ enum Expr {
 	EClass(name:String, e:Expr, ?extend:String);
 	EForGen( it : Expr, e : Expr );
 	ECast( e : Expr, ?t : CType );
-	EForGen( it : Expr, e : Expr );
-	ECast( e : Expr, ?t : CType );
 }
 
 typedef Argument = { name : String, ?t : CType, ?opt : Bool, ?value : Expr };
