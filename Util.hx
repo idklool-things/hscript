@@ -1,4 +1,4 @@
-package utils;
+package;
 
 #if openfl
 import openfl.utils.Assets;
@@ -14,7 +14,7 @@ using StringTools;
  * ...
  * @author Idklool (idklel01)
  */
-
+// Removi algumas funções porque sim lol
 class Util
 {
     public static function getContent(id:String):String
