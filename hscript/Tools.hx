@@ -120,8 +120,7 @@ class Tools {
 		return e;
 		#end
 	}
-<<<<<<< HEAD
-	
+
 	public static function getNestedClasses(name:String):Array<String>
 	{
 	    var classes:Array<String> = [];
