@@ -65,8 +65,8 @@ class Script {
         set('Assets', Assets);
         #end
         #if flixel
-        set('FlxColor', scripts.idk.utils.ColorUtil);
-        set('FlxPoint', scripts.idk.utils.ScriptPoint);
+        set('FlxColor', utils.ColorUtil);
+        set('FlxPoint', utils.ScriptPoint);
         #end
         #if sys
         set('FileSystem', sys.FileSystem);
