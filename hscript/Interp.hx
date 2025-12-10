@@ -120,6 +120,10 @@ class Interp {
         return v1;
     });
 		binops.set("is",function(e1,e2) return #if (haxe_ver >= 4.2) Std.isOfType #else Std.is #end (me.expr(e1), me.expr(e2)));
+		binops.set("??",function(e1,e2) {
+			var v1 : Dynamic = me.expr(e1);
+			return if( v1 != null ) v1 else me.expr(e2);
+		});
 		assignOp("+=",function(v1:Dynamic,v2:Dynamic) return v1 + v2);
 		assignOp("-=",function(v1:Float,v2:Float) return v1 - v2);
 		assignOp("*=",function(v1:Float,v2:Float) return v1 * v2);
