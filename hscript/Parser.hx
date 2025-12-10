@@ -1707,16 +1707,8 @@ class Parser {
 				char = readChar();
 				if( char == ".".code )
 					return TQuestionDot;
-<<<<<<< HEAD
-				else if ( char == '?'.code ) {
-				    char = readChar();
-				    if( char == '='.code ) return TOp('??' + '=');
-				    return TOp('??');
-				}
-=======
 				if( char == "?".code )
 					return TQuestionDouble;
->>>>>>> a4520c2aac08576c81f458ff6f7ce5af84e11ac7
 				this.char = char;
 				return TQuestion;
 			case ":".code: return TDoubleDot;
