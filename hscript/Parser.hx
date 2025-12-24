@@ -352,7 +352,7 @@ class Parser {
 			var e = parseStructure(id);
 			if( e == null )
 				e = mk(EIdent(id));
-			return parseExprNext(e);
+			return isBlock(e) ? e : parseExprNext(e);
 		case TConst(c):
 			return parseExprNext(mk(EConst(c)));
 		case TPOpen:
@@ -735,22 +735,19 @@ class Parser {
 			var e = if( tk == TSemicolon ) null else parseExpr();
 			mk(EReturn(e),p1,if( e == null ) tokenMax else pmax(e));
 		case "new":
-			var a = new Array();
-			a.push(getIdent());
-			while( true ) {
-				var tk = token();
-				switch( tk ) {
-				case TDot:
-					a.push(getIdent());
-				case TPOpen:
-					break;
-				default:
-					unexpected(tk);
-					break;
-				}
+			var start = tokenMin;
+			var t = parseType();
+			switch( t ) {
+			case CTPath(path, params):
+				if( params != null && !allowTypes )
+					error(ECustom("Type parameters are not allowed"),start,tokenMax);
+				ensure(TPOpen);
+				var args = parseExprList(TPClose);
+				mk(ENew(path.join("."),args,params),p1);
+			default:
+				error(ECustom("Invalid type"),start,tokenMax);
+				null;
 			}
-			var args = parseExprList(TPClose);
-			mk(ENew(a.join("."),args),p1);
 		case "throw":
 			var e = parseExpr();
 			mk(EThrow(e),p1,pmax(e));
