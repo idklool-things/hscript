@@ -17,12 +17,13 @@ class Script {
     public var parser:Parser;
     public var interp:Interp;
     public var onError:ScriptError->Void;
-    
+
     public function new()
     {
         interp = new Interp();
         parser = new Parser();
         parser.allowJSON = parser.allowTypes = parser.allowMetadata = true;
+        parser.preprocesorValues = getPreprocessorValues();
         preset();
     }
     
@@ -84,13 +85,12 @@ class Script {
             }
             catch (e)
             {
-                openfl.Lib.application.window.alert(e.message, 'Error!');
                 handleError(RuntimeError(e.message, getStack()));
             }
         }
         return null;
     }
-    
+
     public function setClassVars(obj:Dynamic, ?functions:Bool)
     {
         if (interp.classObjects == null) interp.classObjects = []; // Melhor prevenir do que remediar
@@ -116,7 +116,10 @@ class Script {
     }
 
     public function handleError(error:ScriptError):Void {
-        onError(error);
+        if (onError != null) onError(error);
+        #if (mobile && openfl && !debug)
+        openfl.Lib.application.window.alert(errorToString(error), 'Error!');
+        #end
         trace(errorToString(error));
     }
 
@@ -136,5 +139,28 @@ class Script {
             case RuntimeError(msg, stack): 'RuntimeError: $msg\nStack: $stack';
             case FileError(path, msg): 'FileError: $msg (file: $path)';
         }
+    }
+
+    public static function getPreprocessorValues():Map<String, Dynamic> {
+        return [
+            'android' => #if android true #else false #end,
+            'ios' => #if ios true #else false #end,
+            'mobile' => #if mobile true #else false #end,
+            'desktop' => #if desktop true #else false #end,
+            'windows' => #if windows true #else false #end,
+            'mac' => #if mac true #else false #end,
+            'linux' => #if linux true #else false #end,
+            'web' => #if web true #else false #end,
+            'sys' => #if sys true #else false #end,
+            'cpp' => #if cpp true #else false #end,
+            'hl' => #if hl true #else false #end,
+            'js' => #if js true #else false #end,
+            'debug' => #if debug true #else false #end,
+            'flixel' => #if flixel true #else false #end,
+            'openfl' => #if openfl true #else false #end,
+            'lime' => #if lime true #else false #end,
+            'hscript' => true,
+            'hscriptPos' => #if hscriptPos true #else false #end
+        ];
     }
 }
