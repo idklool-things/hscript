@@ -121,28 +121,25 @@ class Tools {
 		#end
 	}
 
-	public static function getNestedClasses(name:String):Array<String>
+	/*
+		Ok so, you can't get classes like flixel.text.FlxText.FlxTextBorderStyle because
+		when the game compiles it just becames flixel.text.FlxTextBorderStyle
+	*/
+	public static function fixClasses(name:String):String
 	{
-	    var classes:Array<String> = [];
-	    var path = name.split('.');
-	    if (path.length > 0)
-	    {
-	        classes.push(path.slice(0, path.length - 1).join('.'));
-	    }
-	   
-	   return classes;
+	    var lastDot = name.lastIndexOf('.');
+		var prevDot = name.lastIndexOf('.', lastDot - 1);
+		if (prevDot == -1)
+			return name.substr(lastDot + 1);
+		else
+			return name.substr(0, prevDot) + name.substr(lastDot);
 	}
 	public static function resolveImport(path:String):Dynamic
 	{
 	    var importedClass:Dynamic = Type.resolveClass(path) != null ? Type.resolveClass(path) : Type.resolveEnum(path);
 	    if (importedClass == null)
 	    {
-	        for (nested in getNestedClasses(path))
-	        {
-	            importedClass = Type.resolveClass(nested) != null ? Type.resolveClass(nested) : Type.resolveEnum(nested);
-	            if (importedClass != null)
-	                return importedClass;
-	        }
+	        importedClass = Type.resolveClass(fixClasses(path)) != null ? Type.resolveClass(fixClasses(path)) : Type.resolveEnum(fixClasses(path));
 	    }
 	    return importedClass;
 	}

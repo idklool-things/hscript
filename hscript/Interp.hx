@@ -43,6 +43,10 @@ class Interp {
 	public var usings:Array<Dynamic> = [];
 	public var imports:Map<String, Dynamic> = [];
 	public var classes:Map<String, Dynamic> = new Map();
+	public var scriptObj(default, set):Dynamic;
+	public function set_scriptObj(v:Dynamic):Dynamic {
+		return scriptObj = v;
+	} 
 
 	#if hscriptPos
 	var curExpr : Expr;
@@ -173,7 +177,13 @@ class Interp {
 		case EIdent(id):
 			var l = locals.get(id);
 			if( l == null )
-				setVar(id,v)
+			{
+				if (!variables.exists(id) && scriptObj != null && Reflect.hasField(scriptObj, id))
+				{
+					Reflect.setProperty(scriptObj, id, v);
+				}
+				else setVar(id,v);
+			}
 			else
 				l.r = v;
 		case EField(e,f):
@@ -206,7 +216,14 @@ class Interp {
 			var l = locals.get(id);
 			v = fop(expr(e1),expr(e2));
 			if( l == null )
-				setVar(id,v)
+			{
+				if (scriptObj != null && Reflect.hasField(scriptObj, id))
+				{
+					Reflect.setProperty(scriptObj, id, v);
+				}
+				else
+					setVar(id,v);
+			}
 			else
 				l.r = v;
 		case EField(e,f):
@@ -348,6 +365,13 @@ class Interp {
 		// This should allow you using classes without importing them first (But you can't use like, `flixel.FlxSprite` ig)
 		var resolvedClass:Dynamic = Tools.resolveImport(id);
 		if (resolvedClass != null) return resolvedClass;
+
+		if (scriptObj != null)
+		{
+			if (id == 'this') return scriptObj;
+			else if (Reflect.hasField(scriptObj, id))
+				return Reflect.getProperty(scriptObj, id);
+		}
 
 	    if (classObjects != null) {
 	        for (cls in classObjects) {
@@ -657,7 +681,30 @@ class Interp {
 		case EPackage(v):
 		    return null;
 		case EClass(name, e, extend):
-			// Later.
+			var cls = {
+				name: name,
+				expr: e,
+				extend: extend,
+				statics: new Map<String, Dynamic>(),
+				instances: new Map<String, Dynamic>()
+			};
+			classes.set(name, cls);
+			switch(Tools.expr(e)) {
+				case EBlock(exprs):
+					// temporary, or maybe not.
+					// i'm not doing full class support anyways.
+					for (e in exprs)
+						expr(e);
+				case EObject(fl):
+					for (f in fl) {
+						cls.statics.set(f.name, expr(f.e));
+					}
+				case EVar(_, _, _), EFunction(_, _, _, _), EMeta(_, _, _):
+					// Nothing beats a jet2holiday. And right now, you can save 50 pounds per person!
+					// That's 200 pounds off for a family of four!
+				default:
+					error(ECustom('Invalid class expression for class: ' + name));
+			}
 		}
 		return null;
 	}
@@ -824,6 +871,14 @@ class Interp {
 
 	function get( o : Dynamic, f : String ) : Dynamic {
 		if ( o == null ) error(EInvalidAccess(f));
+		if (o == scriptObj) {
+			var l = locals.get(f);
+			if (l != null) return l.r;
+			var g = variables.get(f);
+			if (g != null) return g;
+			if (Reflect.hasField(scriptObj, f)) return Reflect.getProperty(scriptObj, f);
+			return null;
+		}
 		return {
 			#if php
 				// https://github.com/HaxeFoundation/haxe/issues/4915
@@ -840,6 +895,11 @@ class Interp {
 
 	function set( o : Dynamic, f : String, v : Dynamic ) : Dynamic {
 		if( o == null ) error(EInvalidAccess(f));
+		if (o == scriptObj) {
+			var l = locals.get(f);
+			if (l != null) { l.r = v; return v; }
+			if (variables.exists(f)) { variables.set(f, v); return v; }
+		}
 		Reflect.setProperty(o,f,v);
 		return v;
 	}
