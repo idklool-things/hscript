@@ -1203,7 +1203,7 @@ class Checker {
 			switch( e.e ) {
 			case EField(obj, f):
 				if( cf.isMethod ) {
-					switch( callExpr?.e ) {
+					switch( callExpr == null ? null : callExpr.e ) {
 					case null:
 					case ECall(ec,params) if( ec == e ):
 						e.e = EField(acc,f);
@@ -1534,7 +1534,7 @@ class Checker {
 
 	function getTypeAccess( t : TType, expr : Expr, ?field : String ) : ExprDef {
 		var path = switch( t ) {
-		case TInst(c,_): c.runtimePath ?? c.name;
+		case TInst(c,_): c.runtimePath != null ? c.runtimePath : c.name;
 		case TEnum(e,_): e.name;
 		default: return null;
 		}
@@ -2084,11 +2084,6 @@ class Checker {
 		unify(ft != null ? ft : itt,iter,it);
 		return { key : key, value : value };
 	}
-<<<<<<< HEAD
-=======
-
 	static function stub_int( v : Float ) return Std.int(v);
 	static function stub_downcast( v : Dynamic, cl : Dynamic ) return Std.downcast(v, cl);
-
->>>>>>> a4520c2aac08576c81f458ff6f7ce5af84e11ac7
 }
