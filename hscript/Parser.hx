@@ -924,7 +924,6 @@ class Parser {
 		}
 	}
 
-<<<<<<< HEAD
 	// Not sure if this works
 	function parseClassFields():Expr
 	{
@@ -975,8 +974,6 @@ class Parser {
 		}
 	}
 
-=======
->>>>>>> 0c7f99dbacd5382d9266cf8dfa6192ef80e58ea4
 	function parseExprNext( e1 : Expr, ?noOp = false ) {
 		var tk = token();
 		switch( tk ) {
