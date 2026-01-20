@@ -222,7 +222,7 @@ class JsInterp extends Interp {
 			return '$$i.get(${exprValue(e)},"$f")';
 		case EBinop(op, e1, e2):
 			switch( op ) {
-			case "+","-","*","/","%","&","|","^",">>","<<",">>>","==","!=",">=","<=",">","<":
+			case "+","-","*","/","%","&","|","^",">>","<<",">>>","==","!=",">=","<=",">","<","??":
 				return '${exprOp(e1)} $op ${exprOp(e2)}';
 			case "||","&&":
 				return '(${exprCond(e1)} $op ${exprCond(e2)})';
@@ -264,6 +264,7 @@ class JsInterp extends Interp {
 			default:
 				error(EInvalidOp(op));
 			}
+			return null;
 		case EUnop(op, prefix, e):
 			switch( op ) {
 			case "!":
@@ -300,6 +301,7 @@ class JsInterp extends Interp {
 			default:
 				error(EInvalidOp(op));
 			}
+			return null;
 		case ECall(e, params):
 			var args = [for( p in params ) exprValue(p)];
 			switch( Tools.expr(e) ) {
